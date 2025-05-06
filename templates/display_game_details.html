@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Game {{ game_id }} Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        th { background: #444; color: #fff; }
+        tr:nth-child(even) { background: #f0f0f0; }
+        #reportForm { background: #fff; padding: 15px; margin-bottom: 20px; border: 1px solid #ccc; display: none; }
+        #reportForm label { display: block; margin: 8px 0 4px; }
+        #reportForm input, #reportForm select { width: 100%; padding: 6px; margin-bottom: 10px; }
+        #openReportForm { margin-bottom: 15px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
+        #submitReport { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Game {{ game_id }} - Play by Play</h1>
+
+    <!-- Create Report Button -->
+    <button id="openReportForm">Create Report</button>
+
+    <!-- Hidden Report Form -->
+    <div id="reportForm">
+        <h2>New Report</h2>
+        <form id="reportFormFields" onsubmit="event.preventDefault(); createReport();">
+            <label for="reportGameId">Game ID</label>
+            <input type="text" id="reportGameId" name="game_id" value="{{ game_id }}" readonly />
+
+            <label for="reportPlayNumber">Play Number</label>
+            <input type="text" id="reportPlayNumber" name="play_number" placeholder="Enter play number" required />
+
+            <label for="reportPlayerId">Player ID</label>
+            <input type="text" id="reportPlayerId" name="player_id" placeholder="Enter player ID" required />
+
+            <button id="submitReport" type="submit">Create Report</button>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Play #</th>
+                <th>Quarter</th>
+                <th>Game Clock</th>
+                <th>Down</th>
+                <th>Yards to Go</th>
+                <th>Play Type</th>
+                <th>Scoring?</th>
+                <th>Offense</th>
+                <th>Defense</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for play in data %}
+            <tr>
+                <td>{{ play["Play Number"] }}</td>
+                <td>{{ play["Quarter"] }}</td>
+                <td>{{ play["Game Clock"] }}</td>
+                <td>{{ play["Down"] }}</td>
+                <td>{{ play["Yards to Go"] }}</td>
+                <td>{{ play["Play Type"] }}</td>
+                <td>{{ play["Scoring"] }}</td>
+                <td>{{ play["Offense"] }}</td>
+                <td>{{ play["Defense"] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        // Toggle visibility of report form
+        document.getElementById('openReportForm').addEventListener('click', function() {
+          const form = document.getElementById('reportForm');
+          form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        });
+      
+        
+        function createReport() {
+          const gameId   = document.getElementById('reportGameId').value;
+          const playNum  = document.getElementById('reportPlayNumber').value;
+          const playerId = document.getElementById('reportPlayerId').value;
+      
+          fetch('/api/report', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              game_id:   gameId,
+              play_id:   playNum,
+              player_id: playerId
+            })
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log('Server response:', json);
+            
+          })
+          .catch(err => console.error('Report error:', err));
+        }
+      </script>
+      
+</body>
+</html>

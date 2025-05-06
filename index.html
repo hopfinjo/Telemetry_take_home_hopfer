@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Football Games</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; }
+        h3 { color: #3498db; margin-top: 30px; border-bottom: 1px solid #3498db; padding-bottom: 5px; }
+        input, button { padding: 8px; margin: 10px 0; }
+        .input-group { display: flex; gap: 10px; align-items: center; }
+        button { background-color: #3498db; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #2980b9; }
+        #gamesList { list-style-type: none; padding: 0; }
+        #gamesList li { padding: 10px; margin: 5px 0; border-bottom: 1px solid #eee; cursor: pointer; }
+        #gamesList li:hover { background-color: #f8f9fa; }
+        .win { color: #27ae60; }
+        .loss { color: #e74c3c; }
+        .loading { color: #7f8c8d; font-style: italic; }
+        .error { color: #e74c3c; }
+    </style>
+</head>
+
+<body>
+    <h1>NCAA Football Games</h1>
+    <div class="input-group">
+        <input type="text" id="seasonInput" placeholder="Enter season (e.g., 2024)" value="2024" />
+        <input type="text" id="teamNameInput" placeholder="Team name (optional)" />
+        <button id="fetchBtn">Fetch Games</button>
+    </div>
+    <div id="statusMessage"></div>
+    <ul id="gamesList"></ul>
+
+    <script>
+        document.getElementById('fetchBtn').addEventListener('click', fetchGames);
+        document.getElementById('seasonInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') fetchGames();
+        });
+        document.getElementById('teamNameInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') fetchGames();
+        });
+
+        async function fetchGames() {
+            const season = document.getElementById('seasonInput').value;
+            const teamFilter = document.getElementById('teamNameInput').value.trim();
+            const gamesList = document.getElementById('gamesList');
+            const statusMessage = document.getElementById('statusMessage');
+
+            gamesList.innerHTML = '';
+            statusMessage.innerHTML = '<p class="loading">Loading games data...</p>';
+
+            try {
+                const response = await fetch(`/api/schedule?season=${season}`);
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                const data = await response.json();
+
+                if (!Array.isArray(data)) {
+                    statusMessage.innerHTML = '<p class="error">Unexpected response format</p>';
+                    return;
+                }
+
+                // Filter teams by name if a team filter is provided
+                let filteredData = data;
+                if (teamFilter) {
+                    const teamRegex = new RegExp(teamFilter, 'i'); // Case-insensitive
+                    filteredData = data.filter(teamData => teamRegex.test(teamData.team));
+                }
+
+                let totalGames = filteredData.reduce((sum, t) => sum + (Array.isArray(t.games) ? t.games.length : 0), 0);
+                
+                if (teamFilter) {
+                    statusMessage.innerHTML = `<p>Found ${filteredData.length} teams matching "${teamFilter}" with ${totalGames} games for season ${season}</p>`;
+                } else {
+                    statusMessage.innerHTML = `<p>Found ${filteredData.length} teams with ${totalGames} games for season ${season}</p>`;
+                }
+
+                filteredData.forEach(teamData => {
+                    if (!Array.isArray(teamData.games)) return;
+                    const teamHeader = document.createElement('h3');
+                    teamHeader.innerText = `Team: ${teamData.team}`;
+                    gamesList.appendChild(teamHeader);
+
+                    teamData.games.forEach(game => {
+                        const li = document.createElement('li');
+                        const home = game.home_team || 'Unknown';
+                        const visitor = game.visitor_team || 'Unknown';
+                        const date = game.game_date || 'Unknown Date';
+                        const hs = game.home_score != null ? game.home_score : '?';
+                        const vs = game.visitor_score != null ? game.visitor_score : '?';
+                        const id = game.game_id || '';
+
+                        li.innerHTML = `<strong>Week ${game.week || '?'}</strong>: ${visitor} ${vs} @ ${home} ${hs} - ${date}`;
+                        li.onclick = () => window.open(`/get_game_details?game_id=${encodeURIComponent(id)}`, '_blank');
+                        if (game.result === 'W') li.classList.add('win');
+                        if (game.result === 'L') li.classList.add('loss');
+                        gamesList.appendChild(li);
+                    });
+                });
+                
+                if (filteredData.length === 0) {
+                    statusMessage.innerHTML = `<p>No teams found matching "${teamFilter}" for season ${season}</p>`;
+                }
+            } catch (err) {
+                statusMessage.innerHTML = `<p class="error">Error: ${err.message}</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>
